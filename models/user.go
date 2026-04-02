@@ -7,10 +7,11 @@ import (
 
 type User struct {
 	gorm.Model
-	Email    string `json:"email" gorm:"unique;not null"`
-	Password string `json:"-" gorm:"not null"`
+	Email        string `json:"email" gorm:"unique;not null"`
+	Password     string `json:"-" gorm:"not null"`
+	RefreshToken string `json:"-" gorm:"type:text"`
+	IsAdmin      bool   `json:"is_admin" gorm:"default:false"`
 }
-
 
 // HashPassword hashes the user's password
 func (u *User) HashPassword(password string) error {

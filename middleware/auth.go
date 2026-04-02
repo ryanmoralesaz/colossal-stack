@@ -12,6 +12,7 @@ import (
 type JWTClaims struct {
 	UserID uint   `json:"user_id"`
 	Email  string `json:"email"`
+	IsAdmin bool `json:"is_admin"`
 	jwt.RegisteredClaims
 }
 
@@ -56,6 +57,7 @@ func Protected() fiber.Handler {
 		// Store user info in context for use in handlers
 		c.Locals("userID", claims.UserID)
 		c.Locals("email", claims.Email)
+		c.Locals("is_admin", claims.IsAdmin)
 
 		return c.Next()
 	}

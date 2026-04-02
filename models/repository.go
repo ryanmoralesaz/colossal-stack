@@ -2,6 +2,7 @@ package models
 
 import (
 	"github.com/gofiber/fiber/v2"
+	"github.com/ryanmoralesaz/colossal-stack/utils"
 	"gorm.io/gorm"
 )
 
@@ -9,116 +10,129 @@ type Repository struct {
 	DB *gorm.DB
 }
 
-// handle POST /api/boos with CreateBook
-func (r *Repository) CreateBook(context *fiber.Ctx) error {
-	book := Book{}
-	// book = {Title: "", "Author: "", Publisher: ""
-	if err := context.BodyParser(&book); err != nil {
-		return context.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"message": "Could not parse request body",
-			"error":   err.Error(),
+// CreateBook creates a new book
+func (r *Repository) CreateBook(c *fiber.Ctx) error {
+	book := new(Book)
+
+	if err := c.BodyParser(book); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Invalid input",
 		})
 	}
 
-	if err := r.DB.Create(&book).Error; err != nil {
-		return context.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-
-			"message": "Could not create book",
-			"error":   err.Error(),
+	// Validate book
+	if err := utils.ValidateStruct(book); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error":   "Validation failed",
+			"details": err.Error(),
 		})
 	}
-	return context.Status(fiber.StatusCreated).JSON(fiber.Map{
-		"message": "Book created succesfully",
-		"data":    book,
+
+	if err := r.DB.Create(book).Error; err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Failed to create book",
+		})
+	}
+
+	return c.Status(fiber.StatusCreated).JSON(fiber.Map{
+		"message": "Book created successfully",
+		"book":    book,
 	})
-
 }
 
-// handle GET route /api/books
-func (r *Repository) GetBooks(context *fiber.Ctx) error {
-	books := []Book{}
+// UpdateBook updates an existing book
+func (r *Repository) UpdateBook(c *fiber.Ctx) error {
+	id := c.Params("id")
+	book := new(Book)
+
+	if err := r.DB.First(book, id).Error; err != nil {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+			"error": "Book not found",
+		})
+	}
+
+	input := new(Book)
+	if err := c.BodyParser(input); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Invalid input",
+		})
+	}
+
+	// Validate input
+	if err := utils.ValidateStruct(input); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error":   "Validation failed",
+			"details": err.Error(),
+		})
+	}
+
+	// Update fields
+	if input.Title != "" {
+		book.Title = input.Title
+	}
+	if input.Author != "" {
+		book.Author = input.Author
+	}
+	if input.Publisher != "" {
+		book.Publisher = input.Publisher
+	}
+	if input.Price > 0 {
+		book.Price = input.Price
+	}
+	if input.Currency != "" {
+		book.Currency = input.Currency
+	}
+
+	if err := r.DB.Save(book).Error; err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Failed to update book",
+		})
+	}
+
+	return c.JSON(fiber.Map{
+		"message": "Book updated successfully",
+		"book":    book,
+	})
+}
+
+// GetBooks retrieves all books
+func (r *Repository) GetBooks(c *fiber.Ctx) error {
+	var books []Book
 
 	if err := r.DB.Find(&books).Error; err != nil {
-		return context.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"message": "Books fetched successfully",
-			"data":    books,
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Failed to retrieve books",
 		})
 	}
-	return context.Status(fiber.StatusOK).JSON(fiber.Map{
-		"message": "Books fetched successfully",
-		"data": books,
-	})
+
+	return c.JSON(books)
 }
 
-// handle GET book by id /api/books/:id
-func (r *Repository) GetBookByID(context *fiber.Ctx) error {
-	id := context.Params("id")
-	book := Book{}
+// GetBookByID retrieves a single book
+func (r *Repository) GetBookByID(c *fiber.Ctx) error {
+	id := c.Params("id")
+	book := new(Book)
 
-	if id == "" {
-		return context.Status(fiber.StatusNotFound).JSON(fiber.Map{
-			"message": "ID cannot be empty",
+	if err := r.DB.First(book, id).Error; err != nil {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+			"error": "Book not found",
 		})
 	}
 
-	if err := r.DB.Where("id=?", id).First(&book).Error; err != nil {
-		return context.Status(fiber.StatusNotFound).JSON(fiber.Map{
-			"message": "Book not found",
-			"error":   err.Error(),
-		})
-	}
-
-	return context.Status(fiber.StatusOK).JSON(fiber.Map{
-		"message": "Book fetched successfully",
-		"data":    book,
-	})
+	return c.JSON(book)
 }
 
-// handle update book PUT /api/books/:id
-func (r *Repository) UpdateBook(context *fiber.Ctx) error {
-	id := context.Params("id")
-	book := Book{}
+// DeleteBook deletes a book
+func (r *Repository) DeleteBook(c *fiber.Ctx) error {
+	id := c.Params("id")
 
-	if err := r.DB.Where("id=?",id).First(&book).Error; err != nil {
-		return context.Status(fiber.StatusNotFound).JSON(fiber.Map{
-			"message": "Book not found",
+	if err := r.DB.Delete(&Book{}, id).Error; err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Failed to delete book",
 		})
 	}
-	updateData := Book {}
-	if err := context.BodyParser(&updateData); err != nil {
-		return context.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"message": "Could not parse request body",
-		})
-	}
-	book.Title = updateData.Title
-	book.Author = updateData.Author
-	book.Publisher = updateData.Publisher
 
-	if err := r.DB.Save(&book).Error; err != nil {
-		return context.Status(fiber.StatusInternalServerError).JSON(
-			fiber.Map{
-				"message": "Could not update book",
-			})
-	}
-
-	return context.Status(fiber.StatusOK).JSON(fiber.Map{
-		"message": "Book updated successfully",
-		"data":    book,
+	return c.JSON(fiber.Map{
+		"message": "Book deleted successfully",
 	})
-}
-
-// handle book delete route DELETE /api/books/:id
-func (r *Repository) DeleteBook(context *fiber.Ctx) error  {
-		id := context.Params("id")
-		book := Book {}
-
-		if err := r.DB.Where("id = ?", id).Delete(&book).Error; err != nil {
-			return context.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-				"message": "Could not delete boook",
-			})
-		}
-		
-		return context.Status(fiber.StatusOK).JSON(fiber.Map{
-			"message": "Book deleted successfully",
-		})
 }

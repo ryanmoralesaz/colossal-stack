@@ -45,6 +45,7 @@ func main() {
 	// Create repository
 	repo := &models.Repository{DB: db}
 	authRepo := &models.AuthRepository{DB: db}
+	userRepo := &models.UserRepository{DB: db}
 
 	// Create Fiber app
 	app := fiber.New(fiber.Config{
@@ -55,8 +56,11 @@ func main() {
 	app.Use(logger.New())
 	app.Use(cors.New())
 
+	// Serve front end
+	app.Static("/", "./public")
+
 	// REST API routes
-	routes.SetupRoutes(app, repo, authRepo)
+	routes.SetupRoutes(app, repo, authRepo, userRepo)
 
 	// GraphQL setup
 	gqlResolver := &graph.Resolver{DB: db}
