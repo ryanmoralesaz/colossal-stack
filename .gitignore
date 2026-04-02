@@ -10,7 +10,8 @@ dist/
 # Environment
 .env
 .env.local
-
+http-client.env.json
+*.http
 # Go
 *.test
 *.out

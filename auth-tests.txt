@@ -1,0 +1,15 @@
+# register user
+curl -X POST https://api.ryanmorales.info/colossal/api/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"email": "ryan@test.com", "password": "SecurePass123"}'
+
+# login to get jwt
+curl -X POST https://api.ryanmorales.info/colossal/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email": "ryan@test.com", "password": "SecurePass123"}'
+
+
+  # add jwt in playground
+  {
+  "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6InJ5YW5AdGVzdC5jb20iLCJleHAiOjE3MTIwNzI4NDAsInVzZXJfaWQiOjF9.xyz123..."
+}

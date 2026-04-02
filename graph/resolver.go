@@ -1,11 +1,21 @@
 package graph
 
-import "gorm.io/gorm"
-// This file will not be regenerated automatically.
-//
-// It serves as dependency injection for your app, add any dependencies you require
-// here.
+import (
+	"context"
+	"fmt"
 
-type Resolver struct{
+	"gorm.io/gorm"
+)
+
+type Resolver struct {
 	DB *gorm.DB
+}
+
+// GetUserIDFromContext extracts user ID from context
+func GetUserIDFromContext(ctx context.Context) (uint, error) {
+	userID, ok := ctx.Value("userID").(uint)
+	if !ok {
+		return 0, fmt.Errorf("unauthorized: authentication required for this operation")
+	}
+	return userID, nil
 }
