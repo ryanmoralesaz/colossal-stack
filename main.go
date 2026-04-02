@@ -1,8 +1,6 @@
 package main
 
 import (
-	"log"
-
 	"github.com/99designs/gqlgen/graphql/handler"
 	"github.com/99designs/gqlgen/graphql/playground"
 	"github.com/gofiber/adaptor/v2"
@@ -12,9 +10,12 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/ryanmoralesaz/colossal-stack/config"
 	"github.com/ryanmoralesaz/colossal-stack/graph"
+	"github.com/ryanmoralesaz/colossal-stack/middleware"
 	"github.com/ryanmoralesaz/colossal-stack/models"
 	"github.com/ryanmoralesaz/colossal-stack/routes"
 	"github.com/ryanmoralesaz/colossal-stack/storage"
+	"log"
+	"net/http"
 )
 
 func main() {
@@ -62,21 +63,25 @@ func main() {
 	gqlServer := handler.NewDefaultServer(graph.NewExecutableSchema(graph.Config{Resolvers: gqlResolver}))
 	gqlPlayground := playground.Handler("GraphQL Playground", "/colossal/graphql")
 
-	// GraphQL endpoint with auth context injection
+	// GraphQL endpoint with custom handler for context injection
 	app.All("/graphql", func(c *fiber.Ctx) error {
-		// Create new context with user info if authenticated
-		ctx := c.Context()
-		newCtx := middleware.InjectUserContext(c, ctx)
+		// Create a custom handler that injects the user context
+		handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			// Inject user context from Fiber
+			ctx := r.Context()
+			ctx = middleware.InjectUserContext(c, ctx)
 
-		// Create a new request with the updated context
-		c.SetUserContext(newCtx)
+			// Create new request with updated context
+			r = r.WithContext(ctx)
 
-		return adaptor.HTTPHandler(gqlServer)(c)
+			// Serve GraphQL
+			gqlServer.ServeHTTP(w, r)
+		})
+
+		return adaptor.HTTPHandler(handler)(c)
 	})
-	// GraphQL endpoints
-	app.Get("/playground", adaptor.HTTPHandler(gqlPlayground))
 
-	// Health check
+	app.Get("/playground", adaptor.HTTPHandler(gqlPlayground)) // Health check
 	app.Get("/health", func(c *fiber.Ctx) error {
 		return c.JSON(fiber.Map{
 			"status":  "ok",

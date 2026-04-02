@@ -12,6 +12,7 @@ import (
 // InjectUserContext extracts JWT and injects user info into request context
 func InjectUserContext(c *fiber.Ctx, ctx context.Context) context.Context {
 	authHeader := c.Get("Authorization")
+
 	if authHeader == "" {
 		return ctx
 	}

@@ -26,6 +26,7 @@ func (r *bookResolver) UpdatedAt(ctx context.Context, obj *models.Book) (string,
 
 // CreateBook is the resolver for the createBook field.
 func (r *mutationResolver) CreateBook(ctx context.Context, input model.CreateBookInput) (*models.Book, error) {
+
 	// Require authentication
 	if _, err := GetUserIDFromContext(ctx); err != nil {
 		return nil, err
